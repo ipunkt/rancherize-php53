@@ -1,0 +1,25 @@
+{
+  "name": "ipunkt/rancherize-php53",
+  "description": "Rancherize plugin to publish images to an ecr repository",
+  "type": "project",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Sven Speckmaier",
+      "email": "sps@ipunkt.biz"
+    }
+  ],
+  "autoload":{
+    "psr-4": {
+      "RancherizePhp53\\": "plugin/"
+    }
+  },
+
+  "require": {},
+  "require-dev": {
+    "ipunkt/rancherize": "dev-master as 2.17.0"
+  },
+  "extra":{
+    "rancherize-provider":"RancherizePhp53\\Php53Provider"
+  }
+}
