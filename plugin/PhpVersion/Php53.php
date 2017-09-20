@@ -1,6 +1,7 @@
 <?php namespace RancherizePhp53\PhpVersion;
 
 use Rancherize\Blueprint\Infrastructure\Infrastructure;
+use Rancherize\Blueprint\Infrastructure\Service\Maker\PhpFpm\Configurations\MailTarget;
 use Rancherize\Blueprint\Infrastructure\Service\Maker\PhpFpm\DefaultTimezone;
 use Rancherize\Blueprint\Infrastructure\Service\Maker\PhpFpm\MemoryLimit;
 use Rancherize\Blueprint\Infrastructure\Service\Maker\PhpFpm\PhpVersion;
@@ -13,7 +14,7 @@ use Rancherize\Configuration\Configuration;
  * Class PHP53
  * @package Rancherize\Blueprint\Infrastructure\Service\Maker\PhpFpm\PhpVersions
  */
-class Php53 implements PhpVersion, MemoryLimit, PostLimit, UploadFileLimit, DefaultTimezone {
+class Php53 implements PhpVersion, MemoryLimit, PostLimit, UploadFileLimit, DefaultTimezone, MailTarget {
 
 	const PHP_IMAGE = 'ipunktbs/php-fpm:53-1.2.0';
 
@@ -43,6 +44,31 @@ class Php53 implements PhpVersion, MemoryLimit, PostLimit, UploadFileLimit, Defa
 	protected $defaultTimezone = self::DEFAULT_TIMEZONE;
 
 	/**
+	 * @var string
+	 */
+	private $mailHost;
+
+	/**
+	 * @var int
+	 */
+	private $mailPort;
+
+	/**
+	 * @var string
+	 */
+	private $mailUsername;
+
+	/**
+	 * @var string
+	 */
+	private $mailPassword;
+
+	/**
+	 * @var string
+	 */
+	private $mailAuthentication;
+
+	/**
 	 * @param Configuration $config
 	 * @param Service $mainService
 	 * @param Infrastructure $infrastructure
@@ -70,6 +96,27 @@ class Php53 implements PhpVersion, MemoryLimit, PostLimit, UploadFileLimit, Defa
 		$defaultTimezone = $this->defaultTimezone;
 		if( $defaultTimezone !== self::DEFAULT_TIMEZONE)
 			$phpFpmService->setEnvironmentVariable('DEFAULT_TIMEZONE', $defaultTimezone);
+
+		$mailHost = $this->mailHost;
+		$mailPort = $this->mailPort;
+
+		if($mailHost !== null && $mailPort !== null)
+			$mailHost = $mailHost .= ':'.$mailPort;
+
+		if($mailHost !== null)
+			$phpFpmService->setEnvironmentVariable('SMTP_SERVER', $mailHost.':'.$mailPort);
+
+		$mailAuth = $this->mailAuthentication;
+		if($mailAuth !== null)
+			$phpFpmService->setEnvironmentVariable('SMTP_AUTHENTICATION', $mailAuth);
+
+		$mailUsername = $this->mailUsername;
+		if($mailUsername !== null)
+			$phpFpmService->setEnvironmentVariable('SMTP_USER', $mailUsername);
+
+		$mailPassword = $this->mailPassword;
+		if($mailPassword !== null)
+			$phpFpmService->setEnvironmentVariable('SMTP_PASSWORD', $mailPassword);
 
 		$this->addAppSource($phpFpmService);
 
@@ -188,5 +235,40 @@ class Php53 implements PhpVersion, MemoryLimit, PostLimit, UploadFileLimit, Defa
 	public function setDefaultTimezone( $defaultTimezone ) {
 		$this->defaultTimezone = $defaultTimezone;
 		return $this;
+	}
+
+	/**
+	 * @param string $host
+	 */
+	public function setMailHost( string $host ) {
+		$this->mailHost = $host;
+	}
+
+	/**
+	 * @param int $port
+	 */
+	public function setMailPort( int $port ) {
+		$this->mailPort = $port;
+	}
+
+	/**
+	 * @param string $username
+	 */
+	public function setMailUsername( string $username ) {
+		$this->mailUsername = $username;
+	}
+
+	/**
+	 * @param string $password
+	 */
+	public function setMailPassword( string $password ) {
+		$this->mailPassword = $password;
+	}
+
+	/**
+	 * @param string $authMethod
+	 */
+	public function setMailAuthentication( string $authMethod ) {
+		$this->mailAuthentication = $authMethod;
 	}
 }
