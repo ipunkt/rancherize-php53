@@ -16,7 +16,7 @@ use Rancherize\Configuration\Configuration;
  */
 class Php53 implements PhpVersion, MemoryLimit, PostLimit, UploadFileLimit, DefaultTimezone, MailTarget {
 
-	const PHP_IMAGE = 'ipunktbs/php-fpm:latest';
+	const PHP_IMAGE = 'ipunktbs/php-fpm:53-1.3.0';
 
 	/**
 	 * @var string|Service
@@ -101,7 +101,7 @@ class Php53 implements PhpVersion, MemoryLimit, PostLimit, UploadFileLimit, Defa
 		$mailPort = $this->mailPort;
 
 		if($mailHost !== null && $mailPort !== null)
-			$mailHost = $mailHost .= ':'.$mailPort;
+			$mailHost .= ':'.$mailPort;
 
 		if($mailHost !== null)
 			$phpFpmService->setEnvironmentVariable('SMTP_SERVER', $mailHost.':'.$mailPort);
