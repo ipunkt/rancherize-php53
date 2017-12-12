@@ -16,7 +16,7 @@ use Rancherize\Configuration\Configuration;
  */
 class Php53 implements PhpVersion, MemoryLimit, PostLimit, UploadFileLimit, DefaultTimezone, MailTarget {
 
-	const PHP_IMAGE = 'ipunktbs/php-fpm:53-1.3.0';
+	const PHP_IMAGE = 'ipunktbs/php:5.3-fpm';
 
 	/**
 	 * @var string|Service
