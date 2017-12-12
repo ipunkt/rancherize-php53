@@ -133,7 +133,6 @@ class Php53 implements PhpVersion, MemoryLimit, PostLimit, UploadFileLimit, Defa
 
 		$mainService->addLink($phpFpmService, 'phpfpm');
 		$mainService->addSidekick($phpFpmService);
-		$mainService->addVolumeFrom($phpFpmService);
 		$infrastructure->addService($phpFpmService);
 	}
 
