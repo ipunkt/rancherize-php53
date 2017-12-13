@@ -1,5 +1,6 @@
 <?php namespace RancherizePhp53\PhpVersion;
 
+use Rancherize\Blueprint\Infrastructure\Dockerfile\Dockerfile;
 use Rancherize\Blueprint\Infrastructure\Infrastructure;
 use Rancherize\Blueprint\Infrastructure\Service\Maker\PhpFpm\AlpineDebugImageBuilder;
 use Rancherize\Blueprint\Infrastructure\Service\Maker\PhpFpm\Configurations\MailTarget;
@@ -30,10 +31,6 @@ class Php53 implements PhpVersion, MemoryLimit, PostLimit, UploadFileLimit, Defa
 	 * @var string|Service
 	 */
 	protected $appTarget;
-	/**
-	 * @var AlpineDebugImageBuilder
-	 */
-	private $debugImageBuilder;
 
 	use MemoryLimitTrait;
 	use PostLimitTrait;
@@ -41,14 +38,6 @@ class Php53 implements PhpVersion, MemoryLimit, PostLimit, UploadFileLimit, Defa
 	use DefaultTimezoneTrait;
 	use MailTargetTrait;
 	use DebugImageTrait;
-
-	/**
-	 * Php53 constructor.
-	 * @param AlpineDebugImageBuilder $debugImageBuilder
-	 */
-	public function __construct( AlpineDebugImageBuilder $debugImageBuilder) {
-		$this->debugImageBuilder = $debugImageBuilder;
-	}
 
 	/**
 	 * @param Configuration $config
@@ -192,7 +181,40 @@ class Php53 implements PhpVersion, MemoryLimit, PostLimit, UploadFileLimit, Defa
 	public function setImage( Service $service ) {
 		$service->setImage( self::PHP_IMAGE );
 
-		if( $this->isDebug() )
-			$service->setImage( $this->debugImageBuilder->makeImage(self::PHP_IMAGE) );
+		if( $this->isDebug() ) {
+			$dockerfile = new Dockerfile();
+			$dockerfile->setFrom( self::PHP_IMAGE );
+			$dockerfile->addInlineFile('/etc/confd/conf.d/xdebug.ini.toml',
+				'[template]
+src = "xdebug.ini.tpl"
+dest = "/usr/local/etc/php/conf.d/30-xdebug.ini"
+');
+			$dockerfile->addInlineFile('/etc/confd/templates/xdebug.ini.tpl',
+				'[xdebug]
+xdebug.remote_enable=On
+{{ if getenv "XDEBUG_REMOTE_HOST" }}
+xdebug.remote_host={{ getenv "XDEBUG_REMOTE_HOST" }}
+{{ else }}
+xdebug.remote_connect_back=On
+{{ end }}
+xdebug.profiler_enable_trigger=On
+xdebug.profiler_output_dir=/opt/profiling
+xdebug.profiler_output_name=cachegrind.out.%t
+');
+			$dockerfile->run('apt-get update && apt-get -y install $PHPIZE_DEPS');
+			$dockerfile->run('docker-php-source extract');
+
+			$dockerfile->run('curl https://pecl.php.net/get/xdebug-2.1.4.tgz -o /tmp/xdebug.tgz ');
+			$dockerfile->run('cd /usr/src && tar -xzf /tmp/xdebug.tgz && cd xdebug-2.1.4 && phpize && ./configure && make && make install && docker-php-ext-enable xdebug');
+
+			$dockerfile->run('docker-php-source delete');
+			$dockerfile->run('apt-get -y remove $PHPIZE_DEPS');
+			$dockerfile->run('rm -rf /var/lib/apt/lists/*');
+
+			$service->setImage( $dockerfile );
+			$service->setEnvironmentVariable('XDEBUG_REMOTE_HOST', gethostname());
+			if($this->debugListener !== null)
+				$service->setEnvironmentVariable('XDEBUG_REMOTE_HOST', $this->debugListener);
+		}
 	}
 }

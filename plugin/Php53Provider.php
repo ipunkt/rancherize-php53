@@ -17,10 +17,8 @@ class Php53Provider implements Provider {
 	/**
 	 */
 	public function register() {
-		$this->container[Php53::class] = function($c) {
-			return new Php53(
-				$c[AlpineDebugImageBuilder::class]
-			);
+		$this->container[Php53::class] = function() {
+			return new Php53( );
 		};
 	}
 
