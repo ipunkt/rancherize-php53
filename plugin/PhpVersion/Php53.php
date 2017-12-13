@@ -1,11 +1,19 @@
 <?php namespace RancherizePhp53\PhpVersion;
 
 use Rancherize\Blueprint\Infrastructure\Infrastructure;
+use Rancherize\Blueprint\Infrastructure\Service\Maker\PhpFpm\AlpineDebugImageBuilder;
 use Rancherize\Blueprint\Infrastructure\Service\Maker\PhpFpm\Configurations\MailTarget;
+use Rancherize\Blueprint\Infrastructure\Service\Maker\PhpFpm\DebugImage;
 use Rancherize\Blueprint\Infrastructure\Service\Maker\PhpFpm\DefaultTimezone;
 use Rancherize\Blueprint\Infrastructure\Service\Maker\PhpFpm\MemoryLimit;
 use Rancherize\Blueprint\Infrastructure\Service\Maker\PhpFpm\PhpVersion;
 use Rancherize\Blueprint\Infrastructure\Service\Maker\PhpFpm\PostLimit;
+use Rancherize\Blueprint\Infrastructure\Service\Maker\PhpFpm\Traits\DebugImageTrait;
+use Rancherize\Blueprint\Infrastructure\Service\Maker\PhpFpm\Traits\DefaultTimezoneTrait;
+use Rancherize\Blueprint\Infrastructure\Service\Maker\PhpFpm\Traits\MailTargetTrait;
+use Rancherize\Blueprint\Infrastructure\Service\Maker\PhpFpm\Traits\MemoryLimitTrait;
+use Rancherize\Blueprint\Infrastructure\Service\Maker\PhpFpm\Traits\PostLimitTrait;
+use Rancherize\Blueprint\Infrastructure\Service\Maker\PhpFpm\Traits\UploadFileLimitTrait;
 use Rancherize\Blueprint\Infrastructure\Service\Maker\PhpFpm\UploadFileLimit;
 use Rancherize\Blueprint\Infrastructure\Service\Service;
 use Rancherize\Configuration\Configuration;
@@ -14,7 +22,7 @@ use Rancherize\Configuration\Configuration;
  * Class PHP53
  * @package Rancherize\Blueprint\Infrastructure\Service\Maker\PhpFpm\PhpVersions
  */
-class Php53 implements PhpVersion, MemoryLimit, PostLimit, UploadFileLimit, DefaultTimezone, MailTarget {
+class Php53 implements PhpVersion, MemoryLimit, PostLimit, UploadFileLimit, DefaultTimezone, MailTarget, DebugImage {
 
 	const PHP_IMAGE = 'ipunktbs/php:5.3-fpm';
 
@@ -22,51 +30,25 @@ class Php53 implements PhpVersion, MemoryLimit, PostLimit, UploadFileLimit, Defa
 	 * @var string|Service
 	 */
 	protected $appTarget;
+	/**
+	 * @var AlpineDebugImageBuilder
+	 */
+	private $debugImageBuilder;
+
+	use MemoryLimitTrait;
+	use PostLimitTrait;
+	use UploadFileLimitTrait;
+	use DefaultTimezoneTrait;
+	use MailTargetTrait;
+	use DebugImageTrait;
 
 	/**
-	 * @var string
+	 * Php53 constructor.
+	 * @param AlpineDebugImageBuilder $debugImageBuilder
 	 */
-	protected $memoryLimit = self::DEFAULT_MEMORY_LIMIT;
-
-	/**
-	 * @var string
-	 */
-	protected $postLimit = self::DEFAULT_POST_LIMIT;
-
-	/**
-	 * @var string
-	 */
-	protected $uploadFileLimit = self::DEFAULT_UPLOAD_FILE_LIMIT;
-
-	/**
-	 * @var string
-	 */
-	protected $defaultTimezone = self::DEFAULT_TIMEZONE;
-
-	/**
-	 * @var string
-	 */
-	private $mailHost;
-
-	/**
-	 * @var int
-	 */
-	private $mailPort;
-
-	/**
-	 * @var string
-	 */
-	private $mailUsername;
-
-	/**
-	 * @var string
-	 */
-	private $mailPassword;
-
-	/**
-	 * @var string
-	 */
-	private $mailAuthentication;
+	public function __construct( AlpineDebugImageBuilder $debugImageBuilder) {
+		$this->debugImageBuilder = $debugImageBuilder;
+	}
 
 	/**
 	 * @param Configuration $config
@@ -81,7 +63,7 @@ class Php53 implements PhpVersion, MemoryLimit, PostLimit, UploadFileLimit, Defa
 
 		$phpFpmService = new Service();
 		$phpFpmService->setName($mainService->getName().'-PHP-FPM');
-		$phpFpmService->setImage( self::PHP_IMAGE );
+		$this->setImage($phpFpmService);
 		$phpFpmService->setRestart(Service::RESTART_UNLESS_STOPPED);
 
 		$memoryLimit = $this->memoryLimit;
@@ -126,13 +108,15 @@ class Php53 implements PhpVersion, MemoryLimit, PostLimit, UploadFileLimit, Defa
 		foreach( $mainService->getEnvironmentVariables() as $name => $value )
 			$phpFpmService->setEnvironmentVariable($name, $value);
 
+		$mainService->addLink($phpFpmService, 'phpfpm');
+
 		/**
 		 * Copy links from the main service so databases etc are available
 		 */
 		$phpFpmService->addLinksFrom($mainService);
 
-		$mainService->addLink($phpFpmService, 'phpfpm');
 		$mainService->addSidekick($phpFpmService);
+		$mainService->addVolumeFrom($phpFpmService);
 		$infrastructure->addService($phpFpmService);
 	}
 
@@ -203,72 +187,12 @@ class Php53 implements PhpVersion, MemoryLimit, PostLimit, UploadFileLimit, Defa
 	}
 
 	/**
-	 * @return $this
+	 * @param Service $service
 	 */
-	public function setMemoryLimit( $limit ) {
-		$this->memoryLimit = $limit;
-		return $this;
-	}
+	public function setImage( Service $service ) {
+		$service->setImage( self::PHP_IMAGE );
 
-	/**
-	 * @return $this
-	 */
-	public function setPostLimit( $limit ) {
-		$this->postLimit = $limit;
-		return $this;
-	}
-
-	/**
-	 * @return $this
-	 */
-	public function setUploadFileLimit( $limit ) {
-		$this->uploadFileLimit = $limit;
-		return $this;
-	}
-
-	/**
-	 * Set the default php timezone
-	 *
-	 * @param $defaultTimezone
-	 * @return $this
-	 */
-	public function setDefaultTimezone( $defaultTimezone ) {
-		$this->defaultTimezone = $defaultTimezone;
-		return $this;
-	}
-
-	/**
-	 * @param string $host
-	 */
-	public function setMailHost( string $host ) {
-		$this->mailHost = $host;
-	}
-
-	/**
-	 * @param int $port
-	 */
-	public function setMailPort( int $port ) {
-		$this->mailPort = $port;
-	}
-
-	/**
-	 * @param string $username
-	 */
-	public function setMailUsername( string $username ) {
-		$this->mailUsername = $username;
-	}
-
-	/**
-	 * @param string $password
-	 */
-	public function setMailPassword( string $password ) {
-		$this->mailPassword = $password;
-	}
-
-	/**
-	 * @param string $authMethod
-	 */
-	public function setMailAuthentication( string $authMethod ) {
-		$this->mailAuthentication = $authMethod;
+		if( $this->isDebug() )
+			$service->setImage( $this->debugImageBuilder->makeImage(self::PHP_IMAGE) );
 	}
 }

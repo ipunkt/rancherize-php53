@@ -1,5 +1,6 @@
 <?php namespace RancherizePhp53;
 
+use Rancherize\Blueprint\Infrastructure\Service\Maker\PhpFpm\AlpineDebugImageBuilder;
 use Rancherize\Blueprint\Infrastructure\Service\Maker\PhpFpm\PhpFpmMaker;
 use Rancherize\Plugin\Provider;
 use Rancherize\Plugin\ProviderTrait;
@@ -16,6 +17,11 @@ class Php53Provider implements Provider {
 	/**
 	 */
 	public function register() {
+		$this->container[Php53::class] = function($c) {
+			return new Php53(
+				$c[AlpineDebugImageBuilder::class]
+			);
+		};
 	}
 
 	/**
@@ -24,8 +30,8 @@ class Php53Provider implements Provider {
 		/**
 		 * @var PhpFpmMaker $fpmMaker
 		 */
-		$fpmMaker = $this->container['php-fpm-maker'];
+		$fpmMaker = $this->container[PhpFpmMaker::class];
 
-		$fpmMaker->addVersion(new Php53);
+		$fpmMaker->addVersion( $this->container[Php53::class] );
 	}
 }
