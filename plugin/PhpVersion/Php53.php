@@ -51,7 +51,11 @@ class Php53 implements PhpVersion, MemoryLimit, PostLimit, UploadFileLimit, Defa
 		$mainService->setEnvironmentVariable('NO_FPM', 'true');
 
 		$phpFpmService = new Service();
-		$phpFpmService->setName($mainService->getName().'-PHP-FPM');
+		$phpFpmService->setName( function() use ($mainService) {
+			$name = $mainService->getName() . '-PHP-FPM';
+			$mainService->setEnvironmentVariable('BACKEND_HOST', $name.':9000');
+			return $name;
+		});
 		$this->setImage($phpFpmService);
 		$phpFpmService->setRestart(Service::RESTART_UNLESS_STOPPED);
 
@@ -161,6 +165,9 @@ class Php53 implements PhpVersion, MemoryLimit, PostLimit, UploadFileLimit, Defa
 		$phpCommandService = new Service();
 		$phpCommandService->setCommand($command);
 		$phpCommandService->setName('PHP-'.$commandName);
+		$phpCommandService->setName( function() use ($mainService, $commandName) {
+			return $mainService->getName() . '-PHP-'.$commandName;
+		});
 		$phpCommandService->setImage( self::PHP_IMAGE );
 		$phpCommandService->setRestart(Service::RESTART_START_ONCE);
 		$this->addAppSource($phpCommandService);
