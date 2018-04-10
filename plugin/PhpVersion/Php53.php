@@ -15,6 +15,7 @@ use Rancherize\Blueprint\Infrastructure\Service\Maker\PhpFpm\Traits\MailTargetTr
 use Rancherize\Blueprint\Infrastructure\Service\Maker\PhpFpm\Traits\MemoryLimitTrait;
 use Rancherize\Blueprint\Infrastructure\Service\Maker\PhpFpm\Traits\PostLimitTrait;
 use Rancherize\Blueprint\Infrastructure\Service\Maker\PhpFpm\Traits\UploadFileLimitTrait;
+use Rancherize\Blueprint\Infrastructure\Service\NetworkMode\ShareNetworkMode;
 use Rancherize\Blueprint\Infrastructure\Service\Maker\PhpFpm\UploadFileLimit;
 use Rancherize\Blueprint\Infrastructure\Service\Service;
 use Rancherize\Configuration\Configuration;
@@ -49,11 +50,12 @@ class Php53 implements PhpVersion, MemoryLimit, PostLimit, UploadFileLimit, Defa
 		 * Disable internal fpm 7.0
 		 */
 		$mainService->setEnvironmentVariable('NO_FPM', 'true');
+		$mainService->setEnvironmentVariable('BACKEND_HOST', '127.0.0.1:9000');
 
 		$phpFpmService = new Service();
+		$phpFpmService->setNetworkMode( new ShareNetworkMode($mainService) );
 		$phpFpmService->setName( function() use ($mainService) {
 			$name = $mainService->getName() . '-PHP-FPM';
-			$mainService->setEnvironmentVariable('BACKEND_HOST', $name.':9000');
 			return $name;
 		});
 		$this->setImage($phpFpmService);
