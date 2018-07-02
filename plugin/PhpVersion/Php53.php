@@ -103,8 +103,6 @@ class Php53 implements PhpVersion, MemoryLimit, PostLimit, UploadFileLimit, Defa
 		foreach( $mainService->getEnvironmentVariables() as $name => $value )
 			$phpFpmService->setEnvironmentVariable($name, $value);
 
-		$mainService->addLink($phpFpmService, 'phpfpm');
-
 		/**
 		 * Copy links from the main service so databases etc are available
 		 */
