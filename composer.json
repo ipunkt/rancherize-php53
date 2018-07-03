@@ -17,7 +17,7 @@
 
   "require": {},
   "require-dev": {
-    "ipunkt/rancherize": "^2.22.0"
+    "ipunkt/rancherize": "^2.24.1"
   },
   "extra":{
     "rancherize-provider":"RancherizePhp53\\Php53Provider"
