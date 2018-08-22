@@ -101,11 +101,6 @@ class Php53 implements PhpVersion, MemoryLimit, PostLimit, UploadFileLimit, Defa
 			return $mainService->getEnvironmentVariables();
 		});
 
-		/**
-		 * Copy links from the main service so databases etc are available
-		 */
-		$phpFpmService->addLinksFrom($mainService);
-
 		$mainService->addSidekick($phpFpmService);
 		$infrastructure->addService($phpFpmService);
 	}
