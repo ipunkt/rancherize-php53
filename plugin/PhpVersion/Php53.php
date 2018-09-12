@@ -2,7 +2,6 @@
 
 use Rancherize\Blueprint\Infrastructure\Dockerfile\Dockerfile;
 use Rancherize\Blueprint\Infrastructure\Infrastructure;
-use Rancherize\Blueprint\Infrastructure\Service\Maker\PhpFpm\AlpineDebugImageBuilder;
 use Rancherize\Blueprint\Infrastructure\Service\Maker\PhpFpm\Configurations\MailTarget;
 use Rancherize\Blueprint\Infrastructure\Service\Maker\PhpFpm\DebugImage;
 use Rancherize\Blueprint\Infrastructure\Service\Maker\PhpFpm\DefaultTimezone;
@@ -55,7 +54,7 @@ class Php53 implements PhpVersion, MemoryLimit, PostLimit, UploadFileLimit, Defa
 		$phpFpmService = new Service();
 		$phpFpmService->setNetworkMode( new ShareNetworkMode($mainService) );
 		$phpFpmService->setName( function() use ($mainService) {
-			$name = $mainService->getName() . '-PHP-FPM';
+			$name = 'PHP-FPM-'.$mainService->getName();
 			return $name;
 		});
 		$this->setImage($phpFpmService);
@@ -158,7 +157,7 @@ class Php53 implements PhpVersion, MemoryLimit, PostLimit, UploadFileLimit, Defa
 		$phpCommandService->setCommand($command);
 		$phpCommandService->setName('PHP-'.$commandName);
 		$phpCommandService->setName( function() use ($mainService, $commandName) {
-			return $mainService->getName() . '-PHP-'.$commandName;
+			return 'PHP-'.$commandName.'-'.$mainService->getName() ;
 		});
 		$phpCommandService->setImage( self::PHP_IMAGE );
 		$phpCommandService->setRestart(Service::RESTART_START_ONCE);
