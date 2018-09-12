@@ -1,5 +1,6 @@
 <?php namespace RancherizePhp53\PhpVersion;
 
+use Closure;
 use Rancherize\Blueprint\Infrastructure\Dockerfile\Dockerfile;
 use Rancherize\Blueprint\Infrastructure\Infrastructure;
 use Rancherize\Blueprint\Infrastructure\Service\Maker\PhpFpm\Configurations\MailTarget;
@@ -27,11 +28,6 @@ class Php53 implements PhpVersion, MemoryLimit, PostLimit, UploadFileLimit, Defa
 
 	const PHP_IMAGE = 'ipunktbs/php:5.3-fpm';
 
-	/**
-	 * @var string|Service
-	 */
-	protected $appTarget;
-
 	use MemoryLimitTrait;
 	use PostLimitTrait;
 	use UploadFileLimitTrait;
@@ -43,8 +39,12 @@ class Php53 implements PhpVersion, MemoryLimit, PostLimit, UploadFileLimit, Defa
 	 * @param Configuration $config
 	 * @param Service $mainService
 	 * @param Infrastructure $infrastructure
+	 * @param Closure|null $customize
 	 */
-	public function make(Configuration $config, Service $mainService, Infrastructure $infrastructure) {
+	public function make(Configuration $config, Service $mainService, Infrastructure $infrastructure, Closure $customize = null) {
+		if ($customize === null)
+			$customize = function(Service $service) {};
+
 		/**
 		 * Disable internal fpm 7.0
 		 */
@@ -94,13 +94,12 @@ class Php53 implements PhpVersion, MemoryLimit, PostLimit, UploadFileLimit, Defa
 		if($mailPassword !== null)
 			$phpFpmService->setEnvironmentVariable('SMTP_PASSWORD', $mailPassword);
 
-		$this->addAppSource($phpFpmService);
-
 		$phpFpmService->setEnvironmentVariablesCallback(function() use ($mainService) {
 			return $mainService->getEnvironmentVariables();
 		});
 
 		$mainService->addSidekick($phpFpmService);
+		$customize($phpFpmService);
 		$infrastructure->addService($phpFpmService);
 	}
 
@@ -109,40 +108,6 @@ class Php53 implements PhpVersion, MemoryLimit, PostLimit, UploadFileLimit, Defa
 	 */
 	public function getVersion() {
 		return '5.3';
-	}
-
-	/**
-	 * @param string $hostDirectory
-	 * @param string $containerDirectory
-	 * @return $this
-	 */
-	public function setAppMount(string $hostDirectory, string $containerDirectory) {
-		$this->appTarget = [$hostDirectory, $containerDirectory];
-		return $this;
-	}
-
-	/**
-	 * @param Service $appService
-	 * @return $this
-	 */
-	public function setAppService(Service $appService) {
-		$this->appTarget = $appService;
-		return $this;
-	}
-
-	/**
-	 * @param $phpFpmService
-	 */
-	protected function addAppSource(Service $phpFpmService) {
-		$appTarget = $this->appTarget;
-
-		if ($appTarget instanceof Service) {
-			$phpFpmService->addVolumeFrom($appTarget);
-			return;
-		}
-
-		list($hostDirectory, $containerDirectory) = $appTarget;
-		$phpFpmService->addVolume($hostDirectory, $containerDirectory);
 	}
 
 	/**
@@ -161,7 +126,6 @@ class Php53 implements PhpVersion, MemoryLimit, PostLimit, UploadFileLimit, Defa
 		});
 		$phpCommandService->setImage( self::PHP_IMAGE );
 		$phpCommandService->setRestart(Service::RESTART_START_ONCE);
-		$this->addAppSource($phpCommandService);
 
 		$phpCommandService->setEnvironmentVariablesCallback(function() use ($mainService) {
 			return $mainService->getEnvironmentVariables();
